@@ -308,7 +308,7 @@
           // Renderizar historial de notas
           const notesList = document.getElementById('notes-list');
           notesList.innerHTML = '';
-          const notes = lead.notes || [];
+          const notes = lead.notas || [];
           if (notes.length === 0) {
             notesList.innerHTML = '<p style="font-size:0.8rem; color:#64748b">No hay notas previas.</p>';
           } else {
@@ -351,11 +351,11 @@
       };
 
       if (!id) {
-        // Guardar registro nuevo
+        // 1. CAMBIADO AQUÍ: Usar 'notas' en lugar de 'notes'
         if (nuevaNotaText) {
-          payload.notes = [{ date: new Date().toISOString(), text: nuevaNotaText }];
+          payload.notas = [{ date: new Date().toISOString(), text: nuevaNotaText }];
         } else {
-          payload.notes = [];
+          payload.notas = [];
         }
 
         const { error } = await _supabase.from('clientes_potenciales').insert([payload]);
@@ -363,12 +363,14 @@
       } else {
         // Editar existente
         const currentLead = allLeadsCache.find(l => l.id === id);
-        let updatedNotes = currentLead.notes || [];
+        // 2. CAMBIADO AQUÍ: Leer desde 'notas' (o un array vacío si no existe)
+        let updatedNotes = currentLead.notas || [];
         
         if (nuevaNotaText) {
           updatedNotes.push({ date: new Date().toISOString(), text: nuevaNotaText });
         }
-        payload.notes = updatedNotes;
+        // 3. CAMBIADO AQUÍ: Asignar a 'notas'
+        payload.notas = updatedNotes;
 
         const { error } = await _supabase.from('clientes_potenciales').update(payload).eq('id', id);
         if (error) console.error(error);
@@ -377,7 +379,6 @@
       closeModal();
       fetchLeads();
     });
-
     // Iniciar la app cargando los leads
     fetchLeads();
   </script>
