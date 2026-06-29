@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freelance CRM Mínimo</title>
+  <!-- Supabase CDN JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #e2e8f0;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-color); padding: 20px; line-height: 1.5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+    
+    button { background-color: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: var(--radius); cursor: pointer; font-weight: 500; font-size: 0.9rem; transition: background 0.2s; }
+    button:hover { background-color: var(--primary-hover); }
+    button.secondary { background-color: transparent; border: 1px solid var(--border); color: var(--text-color); }
+    button.secondary:hover { background: #f1f5f9; }
+    
+    /* Filtros y Controles */
+    .controls-card { background: var(--card-bg); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+    select, input, textarea { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; color: var(--text-color); outline: none; background: #fff; }
+    select:focus, input:focus, textarea:focus { border-color: var(--primary); }
+    .controls-card select { min-width: 150px; flex: 1; }
+
+    /* Tabla Responsiva */
+    .table-container { background: var(--card-bg); border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+    th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+    th { background: #f1f5f9; font-weight: 600; color: #475569; }
+    tr:hover { background-color: #f8fafc; }
+    
+    /* Badges de Estado */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+    .status-por-contactar { background: #fee2e2; color: #991b1b; }
+    .status-contactado { background: #e0f2fe; color: #0369a1; }
+    .status-interesado { background: #fef9c3; color: #854d0e; }
+    .status-en-seguimiento { background: #f3e8ff; color: #6b21a8; }
+    .status-cliente { background: #dcfce7; color: #166534; }
+    .status-descartado { background: #f1f5f9; color: #475569; }
+
+    /* Modales */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 10; padding: 16px; }
+    .modal-content { background: var(--card-bg); padding: 24px; border-radius: var(--radius); width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    
+    /* Historial de Notas */
+    .notes-history { margin-top: 16px; max-height: 150px; overflow-y: auto; background: #f8fafc; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); }
+    .note-item { font-size: 0.8rem; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+    .note-item:last-child { margin-bottom: 0; padding-bottom: 0; border: none; }
+    .note-date { font-weight: bold; color: #64748b; }
+
+    /* Adaptación Mobile */
+    @media (max-width: 768px) {
+      .controls-card { flex-direction: column; }
+      table, thead, tbody, th, td, tr { display: block; }
+      thead { display: none; }
+      tr { border-bottom: 2px solid var(--border); padding: 12px 4px; }
+      td { border: none; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; }
+      td::before { content: attr(data-label); font-weight: 600; color: #64748b; font-size: 0.8rem; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Mis Clientes Potenciales</h1>
+      <button onclick="openModal('add')">+ Nuevo Lead</button>
+    </header>
+
+    <!-- Filtros -->
+    <section class="controls-card">
+      <select id="filter-estado" onchange="fetchLeads()">
+        <option value="">Todos los Estados</option>
+        <option value="Por contactar">Por contactar</option>
+        <option value="Contactado">Contactado</option>
+        <option value="Interesado">Interesado</option>
+        <option value="En seguimiento">En seguimiento</option>
+        <option value="Cliente">Cliente</option>
+        <option value="Descartado">Descartado</option>
+      </select>
+      <select id="filter-rubro" onchange="fetchLeads()">
+        <option value="">Todos los Rubros</option>
+        <option value="Colegio">Colegio</option>
+        <option value="Agrícola">Agrícola</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Comercio">Comercio</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </section>
+
+    <!-- Listado -->
+    <main class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Rubro</th>
+            <th>Contacto Principal</th>
+            <th>Estado</th>
+            <th>Próximo Paso</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="leads-tbody">
+          <!-- Carga dinámica aquí -->
+        </tbody>
+      </table>
+    </main>
+  </div>
+
+  <!-- MODAL FORMULARIO (Agregar / Editar) -->
+  <div id="lead-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Nuevo Lead</h3>
+        <button onclick="closeModal()" class="secondary" style="padding: 4px 8px;">✕</button>
+      </div>
+      <form id="lead-form">
+        <input type="hidden" id="lead-id">
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nombre_empresa">Empresa *</label>
+            <input type="text" id="nombre_empresa" required>
+          </div>
+          <div class="form-group">
+            <label for="rubro">Rubro *</label>
+            <select id="rubro" required>
+              <option value="Colegio">Colegio</option>
+              <option value="Agrícola">Agrícola</option>
+              <option value="Transporte">Transporte</option>
+              <option value="Comercio">Comercio</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="contacto_director">Contacto / Director</label>
+            <input type="text" id="contacto_director">
+          </div>
+          <div class="form-group">
+            <label for="estado">Estado *</label>
+            <select id="estado" required>
+              <option value="Por contactar">Por contactar</option>
+              <option value="Contactado">Contactado</option>
+              <option value="Interesado">Interesado</option>
+              <option value="En seguimiento">En seguimiento</option>
+              <option value="Cliente">Cliente</option>
+              <option value="Descartado">Descartado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="telefono">Teléfono</label>
+            <input type="text" id="telefono">
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="direccion">Dirección</label>
+          <input type="text" id="direccion">
+        </div>
+
+        <hr style="margin: 16px 0; border: 0; border-top: 1px solid var(--border);">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="proximo_paso">Próximo Paso</label>
+            <input type="text" id="proximo_paso" placeholder="Ej: Llamar para cotizar">
+          </div>
+          <div class="form-group">
+            <label for="fecha_seguimiento">Fecha Seguimiento</label>
+            <input type="date" id="fecha_seguimiento">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="nueva_nota">Añadir nueva nota de visita/llamada</label>
+          <textarea id="nueva_nota" rows="2" placeholder="Escribe aquí los detalles del contacto actual..."></textarea>
+        </div>
+
+        <!-- Historial de Notas visible solo al editar -->
+        <div id="history-container" style="display:none;">
+          <label>Historial de notas:</label>
+          <div id="notes-list" class="notes-history"></div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="secondary" onclick="closeModal()">Cancelar</button>
+          <button type="submit">Guardar Lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // CONFIGURACIÓN SUPABASE - Reemplaza con tus llaves reales
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+    
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let allLeadsCache = [];
+
+    // Formatear texto de estados para las clases CSS
+    const formatClass = (str) => 'status-' + str.toLowerCase().replace(/ /g, '-');
+
+    // Cargar datos desde Supabase
+    async function fetchLeads() {
+      const filterEstado = document.getElementById('filter-estado').value;
+      const filterRubro = document.getElementById('filter-rubro').value;
+
+      let query = supabase.from('clientes_potenciales').select('*').order('created_at', { ascending: false });
+
+      if (filterEstado) query = query.eq('estado', filterEstado);
+      if (filterRubro) query = query.eq('rubro', filterRubro);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error cargando datos:", error);
+        alert("Ocurrió un error al traer la información.");
+        return;
+      }
+
+      allLeadsCache = data;
+      renderTable(data);
+    }
+
+    // Dibujar las filas de la tabla
+    function renderTable(leads) {
+      const tbody = document.getElementById('leads-tbody');
+      tbody.innerHTML = '';
+
+      if (leads.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#64748b;">No hay clientes potenciales registrados.</td></tr>`;
+        return;
+      }
+
+      leads.forEach(lead => {
+        const tr = document.createElement('tr');
+        
+        const fechaSeg = lead.fecha_seguimiento ? new Date(lead.fecha_seguimiento).toLocaleDateString('es-ES', {timeZone: 'UTC'}) : 'No definida';
+        const prox = lead.proximo_paso ? `${lead.proximo_paso} (${fechaSeg})` : 'Sin planificar';
+
+        tr.innerHTML = `
+          <td data-label="Empresa"><strong>${lead.nombre_empresa}</strong><br><small style="color:#64748b">${lead.direccion || ''}</small></td>
+          <td data-label="Rubro">${lead.rubro}</td>
+          <td data-label="Contacto Principal">${lead.contacto_director || '—'}<br><small style="color:#64748b">${lead.telefono || ''}</small></td>
+          <td data-label="Estado"><span class="badge ${formatClass(lead.estado)}">${lead.estado}</span></td>
+          <td data-label="Próximo Paso"><small>${prox}</small></td>
+          <td data-label="Acciones"><button class="secondary" style="padding: 4px 10px; font-size:0.8rem" onclick="openModal('edit', '${lead.id}')">Editar / Notas</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Abrir ventana modal
+    function openModal(mode, id = null) {
+      const modal = document.getElementById('lead-modal');
+      const form = document.getElementById('lead-form');
+      form.reset();
+      document.getElementById('lead-id').value = '';
+      document.getElementById('history-container').style.display = 'none';
+      
+      if (mode === 'add') {
+        document.getElementById('modal-title').innerText = 'Nuevo Cliente Potencial';
+      } else if (mode === 'edit') {
+        document.getElementById('modal-title').innerText = 'Editar Cliente Potencial';
+        document.getElementById('history-container').style.display = 'block';
+        
+        const lead = allLeadsCache.find(l => l.id === id);
+        if (lead) {
+          document.getElementById('lead-id').value = lead.id;
+          document.getElementById('nombre_empresa').value = lead.nombre_empresa;
+          document.getElementById('rubro').value = lead.rubro;
+          document.getElementById('contacto_director').value = lead.contacto_director || '';
+          document.getElementById('estado').value = lead.estado;
+          document.getElementById('telefono').value = lead.telefono || '';
+          document.getElementById('email').value = lead.email || '';
+          document.getElementById('direccion').value = lead.direccion || '';
+          document.getElementById('proximo_paso').value = lead.proximo_paso || '';
+          document.getElementById('fecha_seguimiento').value = lead.fecha_seguimiento || '';
+          
+          // Renderizar historial de notas
+          const notesList = document.getElementById('notes-list');
+          notesList.innerHTML = '';
+          const notes = lead.notes || [];
+          if (notes.length === 0) {
+            notesList.innerHTML = '<p style="font-size:0.8rem; color:#64748b">No hay notas previas.</p>';
+          } else {
+            // Mostrar las notas más recientes primero
+            [...notes].reverse().forEach(n => {
+              notesList.innerHTML += `
+                <div class="note-item">
+                  <span class="note-date">${new Date(n.date).toLocaleDateString('es-ES')}:</span> ${n.text}
+                </div>
+              `;
+            });
+          }
+        }
+      }
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('lead-modal').style.display = 'none';
+    }
+
+    // Guardar o Actualizar Datos
+    document.getElementById('lead-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('lead-id').value;
+      const nombre_empresa = document.getElementById('nombre_empresa').value;
+      const rubro = document.getElementById('rubro').value;
+      const contacto_director = document.getElementById('contacto_director').value;
+      const estado = document.getElementById('estado').value;
+      const telefono = document.getElementById('telefono').value;
+      const email = document.getElementById('email').value;
+      const direccion = document.getElementById('direccion').value;
+      const proximo_paso = document.getElementById('proximo_paso').value;
+      const fecha_seguimiento = document.getElementById('fecha_seguimiento').value || null;
+      const nuevaNotaText = document.getElementById('nueva_nota').value.trim();
+
+      let payload = {
+        nombre_empresa, rubro, contacto_director, estado, telefono, email, direccion, proximo_paso, fecha_seguimiento
+      };
+
+      if (!id) {
+        // Guardar registro nuevo
+        if (nuevaNotaText) {
+          payload.notes = [{ date: new Date().toISOString(), text: nuevaNotaText }];
+        } else {
+          payload.notes = [];
+        }
+
+        const { error } = await supabase.from('clientes_potenciales').insert([payload]);
+        if (error) console.error(error);
+      } else {
+        // Editar existente
+        const currentLead = allLeadsCache.find(l => l.id === id);
+        let updatedNotes = currentLead.notes || [];
+        
+        if (nuevaNotaText) {
+          updatedNotes.push({ date: new Date().toISOString(), text: nuevaNotaText });
+        }
+        payload.notes = updatedNotes;
+
+        const { error } = await supabase.from('clientes_potenciales').update(payload).eq('id', id);
+        if (error) console.error(error);
+      }
+
+      closeModal();
+      fetchLeads();
+    });
+
+    // Iniciar la app cargando los leads
+    fetchLeads();
+  </script>
+</body>
+</html>
