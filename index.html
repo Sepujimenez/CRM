@@ -221,8 +221,8 @@
     const SUPABASE_URL = "https://lgdjaneabvygmwcniooe.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZGphbmVhYnZ5Z213Y25pb29lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTc5ODMsImV4cCI6MjA5ODMzMzk4M30.9eOXa9Cy4tGwFmtjhQaPmX-feU5RyUs2f2nbAMXK_Zc";
     
-    // Cambiado a _supabase para evitar conflictos con la librería global
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Inicialización limpia usando una constante única para toda la app
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let allLeadsCache = [];
 
     // Formatear texto de estados para las clases CSS
@@ -233,7 +233,7 @@
       const filterEstado = document.getElementById('filter-estado').value;
       const filterRubro = document.getElementById('filter-rubro').value;
 
-      let query = _supabase.from('clientes_potenciales').select('*').order('created_at', { ascending: false });
+      let query = db.from('clientes_potenciales').select('*').order('created_at', { ascending: false });
 
       if (filterEstado) query = query.eq('estado', filterEstado);
       if (filterRubro) query = query.eq('rubro', filterRubro);
@@ -305,14 +305,13 @@
           document.getElementById('proximo_paso').value = lead.proximo_paso || '';
           document.getElementById('fecha_seguimiento').value = lead.fecha_seguimiento || '';
           
-          // Renderizar historial de notas
+          // Renderizar historial de notas mapeando correctamente la columna "notas"
           const notesList = document.getElementById('notes-list');
           notesList.innerHTML = '';
           const notes = lead.notas || [];
           if (notes.length === 0) {
             notesList.innerHTML = '<p style="font-size:0.8rem; color:#64748b">No hay notas previas.</p>';
           } else {
-            // Mostrar las notas más recientes primero
             [...notes].reverse().forEach(n => {
               notesList.innerHTML += `
                 <div class="note-item">
@@ -351,34 +350,33 @@
       };
 
       if (!id) {
-        // 1. CAMBIADO AQUÍ: Usar 'notas' en lugar de 'notes'
+        // Enviar a la columna correcta 'notas' en español
         if (nuevaNotaText) {
           payload.notas = [{ date: new Date().toISOString(), text: nuevaNotaText }];
         } else {
           payload.notas = [];
         }
 
-        const { error } = await _supabase.from('clientes_potenciales').insert([payload]);
+        const { error } = await db.from('clientes_potenciales').insert([payload]);
         if (error) console.error(error);
       } else {
         // Editar existente
         const currentLead = allLeadsCache.find(l => l.id === id);
-        // 2. CAMBIADO AQUÍ: Leer desde 'notas' (o un array vacío si no existe)
         let updatedNotes = currentLead.notas || [];
         
         if (nuevaNotaText) {
           updatedNotes.push({ date: new Date().toISOString(), text: nuevaNotaText });
         }
-        // 3. CAMBIADO AQUÍ: Asignar a 'notas'
         payload.notas = updatedNotes;
 
-        const { error } = await _supabase.from('clientes_potenciales').update(payload).eq('id', id);
+        const { error } = await db.from('clientes_potenciales').update(payload).eq('id', id);
         if (error) console.error(error);
       }
 
       closeModal();
       fetchLeads();
     });
+
     // Iniciar la app cargando los leads
     fetchLeads();
   </script>
