@@ -232,7 +232,7 @@
       const filterEstado = document.getElementById('filter-estado').value;
       const filterRubro = document.getElementById('filter-rubro').value;
 
-      let query = supabase.from('clientes_potenciales').select('*').order('created_at', { ascending: false });
+      let query = _supabase.from('clientes_potenciales').select('*').order('created_at', { ascending: false });
 
       if (filterEstado) query = query.eq('estado', filterEstado);
       if (filterRubro) query = query.eq('rubro', filterRubro);
@@ -357,7 +357,7 @@
           payload.notes = [];
         }
 
-        const { error } = await supabase.from('clientes_potenciales').insert([payload]);
+        const { error } = await _supabase.from('clientes_potenciales').insert([payload]);
         if (error) console.error(error);
       } else {
         // Editar existente
@@ -369,7 +369,7 @@
         }
         payload.notes = updatedNotes;
 
-        const { error } = await supabase.from('clientes_potenciales').update(payload).eq('id', id);
+        const { error } = await _supabase.from('clientes_potenciales').update(payload).eq('id', id);
         if (error) console.error(error);
       }
 
