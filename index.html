@@ -216,12 +216,13 @@
     </div>
   </div>
 
-  <script>
-    // CONFIGURACIÓN SUPABASE - Reemplaza con tus llaves reales
+<script>
+    // CONFIGURACIÓN SUPABASE
     const SUPABASE_URL = "https://lgdjaneabvygmwcniooe.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZGphbmVhYnZ5Z213Y25pb29lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTc5ODMsImV4cCI6MjA5ODMzMzk4M30.9eOXa9Cy4tGwFmtjhQaPmX-feU5RyUs2f2nbAMXK_Zc";
     
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Cambiado a _supabase para evitar conflictos con la librería global
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let allLeadsCache = [];
 
     // Formatear texto de estados para las clases CSS
