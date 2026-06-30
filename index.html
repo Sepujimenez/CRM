@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Freelance CRM Mínimo</title>
+  <title>Freelance CRM - Calendario de Visitas</title>
   <!-- Supabase CDN JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -27,27 +27,38 @@
     button.secondary { background-color: transparent; border: 1px solid var(--border); color: var(--text-color); }
     button.secondary:hover { background: #f1f5f9; }
     
-    /* Filtros y Controles */
-    .controls-card { background: var(--card-bg); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+    /* Filtros y Cabecera de Calendario */
+    .controls-card { background: var(--card-bg); padding: 16px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .filter-group { display: flex; gap: 12px; flex-wrap: wrap; flex: 1; }
+    .nav-calendar { display: flex; align-items: center; gap: 8px; }
+    .nav-calendar h2 { font-size: 1.1rem; font-weight: 600; min-width: 160px; text-align: center; }
     select, input, textarea { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 0.9rem; color: var(--text-color); outline: none; background: #fff; }
     select:focus, input:focus, textarea:focus { border-color: var(--primary); }
-    .controls-card select { min-width: 150px; flex: 1; }
 
-    /* Tabla Responsiva */
-    .table-container { background: var(--card-bg); border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-    th, td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
-    th { background: #f1f5f9; font-weight: 600; color: #475569; }
-    tr:hover { background-color: #f8fafc; }
+    /* Estructura del Calendario */
+    .calendar-container { background: var(--card-bg); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; }
+    .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); background: #f1f5f9; text-align: center; font-weight: 600; color: #475569; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+    .weekday { padding: 10px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(100px, auto); }
     
-    /* Badges de Estado */
-    .badge { display: inline-block; padding: 4px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
-    .status-por-contactar { background: #fee2e2; color: #991b1b; }
-    .status-contactado { background: #e0f2fe; color: #0369a1; }
-    .status-interesado { background: #fef9c3; color: #854d0e; }
-    .status-en-seguimiento { background: #f3e8ff; color: #6b21a8; }
-    .status-cliente { background: #dcfce7; color: #166534; }
-    .status-descartado { background: #f1f5f9; color: #475569; }
+    /* Celdas del Día */
+    .calendar-day { background: #fff; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 6px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+    .calendar-day:nth-child(7n) { border-right: none; }
+    .day-number { font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 4px; display: inline-block; width: 22px; height: 22px; text-align: center; line-height: 22px; }
+    .day-today { background: #2563eb; color: #fff; border-radius: 50%; }
+    .day-other-month { background: #f8fafc; opacity: 0.5; }
+    
+    /* Tarjetas de Evento / Lead dentro del día */
+    .event-item { background: #e0f2fe; color: #0369a1; padding: 4px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 500; cursor: pointer; border-left: 3px solid #0284c7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: transform 0.1s; }
+    .event-item:hover { transform: scale(1.02); background: #bae6fd; }
+    
+    /* Badges de Estado adaptados para el calendario */
+    .event-por-contactar { background: #fee2e2; color: #991b1b; border-left-color: #ef4444; }
+    .event-contactado { background: #e0f2fe; color: #0369a1; border-left-color: #3b82f6; }
+    .event-interesado { background: #fef9c3; color: #854d0e; border-left-color: #eab308; }
+    .event-en-seguimiento { background: #f3e8ff; color: #6b21a8; border-left-color: #a855f7; }
+    .event-cliente { background: #dcfce7; color: #166534; border-left-color: #22c55e; }
+    .event-descartado { background: #f1f5f9; color: #475569; border-left-color: #94a3b8; }
 
     /* Modales */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; z-index: 10; padding: 16px; }
@@ -64,13 +75,12 @@
 
     /* Adaptación Mobile */
     @media (max-width: 768px) {
-      .controls-card { flex-direction: column; }
-      table, thead, tbody, th, td, tr { display: block; }
-      thead { display: none; }
-      tr { border-bottom: 2px solid var(--border); padding: 12px 4px; }
-      td { border: none; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; }
-      td::before { content: attr(data-label); font-weight: 600; color: #64748b; font-size: 0.8rem; }
-      .form-row { grid-template-columns: 1fr; }
+      .controls-card { flex-direction: column; align-items: stretch; }
+      .calendar-weekdays { display: none; }
+      .calendar-grid { grid-template-columns: 1fr; grid-auto-rows: auto; }
+      .calendar-day { border-right: none; padding: 10px; min-height: auto !important; }
+      .calendar-day:not(:has(.event-item)) { display: none; } /* En móvil oculta días vacíos para ahorrar espacio */
+      .day-number { display: block; width: auto; height: auto; background: #f1f5f9; padding: 4px; border-radius: 4px; text-align: left; }
     }
   </style>
 </head>
@@ -78,48 +88,53 @@
 
   <div class="container">
     <header>
-      <h1>Mis Clientes Potenciales</h1>
+      <h1>Agenda de Clientes Potenciales</h1>
       <button onclick="openModal('add')">+ Nuevo Lead</button>
     </header>
 
-    <!-- Filtros -->
+    <!-- Filtros y Navegación del Calendario -->
     <section class="controls-card">
-      <select id="filter-estado" onchange="fetchLeads()">
-        <option value="">Todos los Estados</option>
-        <option value="Por contactar">Por contactar</option>
-        <option value="Contactado">Contactado</option>
-        <option value="Interesado">Interesado</option>
-        <option value="En seguimiento">En seguimiento</option>
-        <option value="Cliente">Cliente</option>
-        <option value="Descartado">Descartado</option>
-      </select>
-      <select id="filter-rubro" onchange="fetchLeads()">
-        <option value="">Todos los Rubros</option>
-        <option value="Colegio">Colegio</option>
-        <option value="Agrícola">Agrícola</option>
-        <option value="Transporte">Transporte</option>
-        <option value="Comercio">Comercio</option>
-        <option value="Otro">Otro</option>
-      </select>
+      <div class="filter-group">
+        <select id="filter-estado" onchange="fetchLeads()">
+          <option value="">Todos los Estados</option>
+          <option value="Por contactar">Por contactar</option>
+          <option value="Contactado">Contactado</option>
+          <option value="Interesado">Interesado</option>
+          <option value="En seguimiento">En seguimiento</option>
+          <option value="Cliente">Cliente</option>
+          <option value="Descartado">Descartado</option>
+        </select>
+        <select id="filter-rubro" onchange="fetchLeads()">
+          <option value="">Todos los Rubros</option>
+          <option value="Colegio">Colegio</option>
+          <option value="Agrícola">Agrícola</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Comercio">Comercio</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      
+      <div class="nav-calendar">
+        <button class="secondary" onclick="changeMonth(-1)">◀ Anterior</button>
+        <h2 id="calendar-month-year">Mes Año</h2>
+        <button class="secondary" onclick="changeMonth(1)">Siguiente ▶</button>
+      </div>
     </section>
 
-    <!-- Listado -->
-    <main class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Empresa</th>
-            <th>Rubro</th>
-            <th>Contacto Principal</th>
-            <th>Estado</th>
-            <th>Próximo Paso</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="leads-tbody">
-          <!-- Carga dinámica aquí -->
-        </tbody>
-      </table>
+    <!-- Contenedor del Calendario -->
+    <main class="calendar-container">
+      <div class="calendar-weekdays">
+        <div class="weekday">Lun</div>
+        <div class="weekday">Mar</div>
+        <div class="weekday">Mié</div>
+        <div class="weekday">Jue</div>
+        <div class="weekday">Vie</div>
+        <div class="weekday">Sáb</div>
+        <div class="weekday">Dom</div>
+      </div>
+      <div id="calendar-grid" class="calendar-grid">
+        <!-- Generación dinámica de días y clientes aquí -->
+      </div>
     </main>
   </div>
 
@@ -188,11 +203,11 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="proximo_paso">Próximo Paso</label>
-            <input type="text" id="proximo_paso" placeholder="Ej: Llamar para cotizar">
+            <label for="proximo_paso">Próximo Paso / Tarea</label>
+            <input type="text" id="proximo_paso" placeholder="Ej: Visita técnica o llamar">
           </div>
           <div class="form-group">
-            <label for="fecha_seguimiento">Fecha Seguimiento</label>
+            <label for="fecha_seguimiento">Fecha Planificada</label>
             <input type="date" id="fecha_seguimiento">
           </div>
         </div>
@@ -216,24 +231,26 @@
     </div>
   </div>
 
-<script>
+  <script>
     // CONFIGURACIÓN SUPABASE
     const SUPABASE_URL = "https://lgdjaneabvygmwcniooe.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZGphbmVhYnZ5Z213Y25pb29lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NTc5ODMsImV4cCI6MjA5ODMzMzk4M30.9eOXa9Cy4tGwFmtjhQaPmX-feU5RyUs2f2nbAMXK_Zc";
     
-    // Inicialización limpia usando una constante única para toda la app
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     let allLeadsCache = [];
+    
+    // Estado de navegación del calendario (Inicia en el mes actual)
+    let currentDate = new Date();
 
-    // Formatear texto de estados para las clases CSS
-    const formatClass = (str) => 'status-' + str.toLowerCase().replace(/ /g, '-');
+    // Formatear estado para CSS
+    const formatClass = (str) => 'event-' + str.toLowerCase().replace(/ /g, '-');
 
-    // Cargar datos desde Supabase
+    // Cargar datos de Supabase
     async function fetchLeads() {
       const filterEstado = document.getElementById('filter-estado').value;
       const filterRubro = document.getElementById('filter-rubro').value;
 
-      let query = db.from('clientes_potenciales').select('*').order('created_at', { ascending: false });
+      let query = db.from('clientes_potenciales').select('*');
 
       if (filterEstado) query = query.eq('estado', filterEstado);
       if (filterRubro) query = query.eq('rubro', filterRubro);
@@ -247,38 +264,100 @@
       }
 
       allLeadsCache = data;
-      renderTable(data);
+      renderCalendar();
     }
 
-    // Dibujar las filas de la tabla
-    function renderTable(leads) {
-      const tbody = document.getElementById('leads-tbody');
-      tbody.innerHTML = '';
+    // Cambiar de mes mediante las flechas
+    function changeMonth(direction) {
+      currentDate.setMonth(currentDate.getMonth() + direction);
+      renderCalendar();
+    }
 
-      if (leads.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#64748b;">No hay clientes potenciales registrados.</td></tr>`;
-        return;
+    // Dibujar el Calendario Completo
+    function renderCalendar() {
+      const grid = document.getElementById('calendar-grid');
+      const label = document.getElementById('calendar-month-year');
+      grid.innerHTML = '';
+
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      // Cabecera de mes actual
+      const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+      label.innerText = `${meses[month]} ${year}`;
+
+      // Primer día del mes y total de días
+      const firstDayOfMonth = new Date(year, month, 1);
+      // Mapear el día de la semana para que Lunes sea 0 y Domingo sea 6
+      let startDayOfWeek = firstDayOfMonth.getDay() - 1;
+      if (startDayOfWeek === -1) startDayOfWeek = 6; 
+
+      const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+      const totalDaysInPrevMonth = new Date(year, month, 0).getDate();
+
+      const hoy = new Date();
+
+      // 1. Dibujar días del mes anterior (Relleno inicial)
+      for (let i = startDayOfWeek - 1; i >= 0; i--) {
+        const dayNum = totalDaysInPrevMonth - i;
+        createDayCell(grid, dayNum, true, false, null);
       }
 
-      leads.forEach(lead => {
-        const tr = document.createElement('tr');
+      // 2. Dibujar días del mes actual
+      for (let day = 1; day <= totalDaysInMonth; day++) {
+        const isToday = (day === hoy.getDate() && month === hoy.getMonth() && year === hoy.getFullYear());
+        // Formato de fecha string local YYYY-MM-DD para comparar con la base de datos
+        const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
-        const fechaSeg = lead.fecha_seguimiento ? new Date(lead.fecha_seguimiento).toLocaleDateString('es-ES', {timeZone: 'UTC'}) : 'No definida';
-        const prox = lead.proximo_paso ? `${lead.proximo_paso} (${fechaSeg})` : 'Sin planificar';
+        createDayCell(grid, day, false, isToday, dateString);
+      }
 
-        tr.innerHTML = `
-          <td data-label="Empresa"><strong>${lead.nombre_empresa}</strong><br><small style="color:#64748b">${lead.direccion || ''}</small></td>
-          <td data-label="Rubro">${lead.rubro}</td>
-          <td data-label="Contacto Principal">${lead.contacto_director || '—'}<br><small style="color:#64748b">${lead.telefono || ''}</small></td>
-          <td data-label="Estado"><span class="badge ${formatClass(lead.estado)}">${lead.estado}</span></td>
-          <td data-label="Próximo Paso"><small>${prox}</small></td>
-          <td data-label="Acciones"><button class="secondary" style="padding: 4px 10px; font-size:0.8rem" onclick="openModal('edit', '${lead.id}')">Editar / Notas</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
+      // 3. Dibujar días del mes siguiente (Relleno final para cuadrar la grilla de 7 columnas)
+      const totalCellsFilled = startDayOfWeek + totalDaysInMonth;
+      const remainingCells = totalCellsFilled % 7 === 0 ? 0 : 7 - (totalCellsFilled % 7);
+      for (let day = 1; day <= remainingCells; day++) {
+        createDayCell(grid, day, true, false, null);
+      }
     }
 
-    // Abrir ventana modal
+    // Crear la celda individual del día e inyectar sus clientes asignados
+    function createDayCell(container, dayNumber, isOtherMonth, isToday, dateString) {
+      const cell = document.createElement('div');
+      cell.className = 'calendar-day';
+      if (isOtherMonth) cell.classList.add('day-other-month');
+
+      // Número identificador del día
+      const numSpan = document.createElement('span');
+      numSpan.className = 'day-number';
+      numSpan.innerText = dayNumber;
+      if (isToday) numSpan.classList.add('day-today');
+      cell.appendChild(numSpan);
+
+      // Si pertenece al mes activo, buscar y meter los leads que caen en este día
+      if (dateString) {
+        const dayLeads = allLeadsCache.filter(lead => lead.fecha_seguimiento === dateString);
+        
+        dayLeads.forEach(lead => {
+          const item = document.createElement('div');
+          item.className = `event-item ${formatClass(lead.estado)}`;
+          // Muestra el nombre de la empresa y la tarea que te toca hacer entre paréntesis
+          const tarea = lead.proximo_paso ? `: ${lead.proximo_paso}` : '';
+          item.innerText = `${lead.nombre_empresa}${tarea}`;
+          item.title = `${lead.nombre_empresa} (${lead.estado})\nTarea: ${lead.proximo_paso || 'No definida'}`;
+          
+          // Al hacer clic abre la ficha de edición directamente
+          item.onclick = (e) => {
+            e.stopPropagation(); // Evita conflictos con el clic de la celda
+            openModal('edit', lead.id);
+          };
+          cell.appendChild(item);
+        });
+      }
+
+      container.appendChild(cell);
+    }
+
+    // Abrir ventana modal (Mismo flujo que tenías)
     function openModal(mode, id = null) {
       const modal = document.getElementById('lead-modal');
       const form = document.getElementById('lead-form');
@@ -305,7 +384,7 @@
           document.getElementById('proximo_paso').value = lead.proximo_paso || '';
           document.getElementById('fecha_seguimiento').value = lead.fecha_seguimiento || '';
           
-          // Renderizar historial de notas mapeando correctamente la columna "notas"
+          // Renderizar historial de notas
           const notesList = document.getElementById('notes-list');
           notesList.innerHTML = '';
           const notes = lead.notas || [];
@@ -350,7 +429,6 @@
       };
 
       if (!id) {
-        // Enviar a la columna correcta 'notas' en español
         if (nuevaNotaText) {
           payload.notas = [{ date: new Date().toISOString(), text: nuevaNotaText }];
         } else {
@@ -360,7 +438,6 @@
         const { error } = await db.from('clientes_potenciales').insert([payload]);
         if (error) console.error(error);
       } else {
-        // Editar existente
         const currentLead = allLeadsCache.find(l => l.id === id);
         let updatedNotes = currentLead.notas || [];
         
@@ -377,7 +454,7 @@
       fetchLeads();
     });
 
-    // Iniciar la app cargando los leads
+    // Iniciar la app cargando los leads en el calendario
     fetchLeads();
   </script>
 </body>
